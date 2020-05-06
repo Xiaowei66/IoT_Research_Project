@@ -1,11 +1,12 @@
 # IoT_Research_Project
+
 UNSW_IoT_Research_Project
 
-1.Please Clone this reporsity to your local computer
+1. Please Clone this reporsity to your local computer
 
-2.open terminal and cd to the directory
+2. open terminal and cd to the directory
 
-3.set up the python3 environment
+3. set up the python3 environment
 
 4. make sure you install these packages
 pip install geopy
