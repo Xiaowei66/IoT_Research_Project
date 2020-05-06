@@ -1,0 +1,1 @@
+Please copy this file to your Android Phone and Install it manually

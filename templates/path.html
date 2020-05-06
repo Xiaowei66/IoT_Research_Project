@@ -1,0 +1,423 @@
+<head>
+	<meta name="viewport" id="vp" content="initial-scale=1.0,user-scalable=no,maximum-scale=1,width=device-width" />
+
+	<link rel="stylesheet" href="https://api.mazemap.com/js/v2.0.25/mazemap.min.css">
+	<script type='text/javascript' src='https://api.mazemap.com/js/v2.0.25/mazemap.min.js'></script>
+
+	<style>
+		body { margin:0px; padding:0px; width: 100%; height:100%; font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif }
+		#controls{
+			position: absolute;
+			box-sizing: border-box;
+			padding: 10px;
+			top: 10px;
+			left: 60px;
+			width: auto;
+			height: auto;
+			right: 60px;
+			display: flex;
+		}
+		#controls button{
+			margin-top: 0px;
+			background-color: rgb(31, 175, 252);
+			padding: 0px 10px;
+			border-radius: 4px;
+			color: rgb(255, 255, 255);
+			width: auto;
+			border: 0;
+			flex-grow: 1;
+			margin: 0px 10px;
+		}
+
+        /* base styles, feel free to edit */
+        :root {
+        --reddit-blue: #0079D3;
+        --reddit-orange: #FF5700;
+        --reddit-grey: rgba(0, 0, 0, 0.0975);
+        --reddit-light-grey:  rgba(0, 0, 0, 0.041);
+        --reddit-bg-color: #f1f1f7;
+        --body-text-size: 12px;
+        --alt-text-color:  rgba(0, 0, 0, 0.65);
+        }
+
+        /* custom gui elements for this example only */
+        .bottom-buttons{
+                position: absolute;
+                left: 50%;
+                transform: translateX(-50%);
+                bottom: 10px;
+                display: flex;
+            }
+
+        .btn{
+            background-color: white;
+            box-shadow: 0px 0px 3px 0px black;
+            padding: 10px 10px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 0px 10px 0px;
+        }
+        
+        .log_input {
+            background-color: var(--reddit-bg-color);
+            font: inherit;
+            font-size: var(--body-text-size);
+            padding: 3% 2% 2% 2%;
+            outline: none;
+            border: 1px solid var(--reddit-grey);
+            border-radius: 4px;
+            width: 97%;
+        }
+        
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1; /* Sit on top */
+            padding-top: 100px; /* Location of the box */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgb(0,0,0); /* Fallback color */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        }
+        
+        .submit_bt {
+            background-color: var(--reddit-blue);
+            font: inherit;
+            font-size: var(--body-text-size);
+            padding: 3% 2% 2% 2%;
+            outline: none;
+            border: 1px solid var(--reddit-grey);
+            border-radius: 4px;
+            margin-left: 0%;
+            margin-top: 2%;
+            width: 101%;
+        }
+        
+        /* Modal Content */
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 26%;
+        }
+
+
+        .img {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 2% 2% 2% 2%;
+            width: 97%;
+            }
+
+        .img_logo {
+            border: 0px solid #ddd;
+            border-radius: 4px;
+            padding: 0% 0% 0% 80%;
+            width: 15%;
+            }
+
+	</style>
+</head>
+<body>
+	<div id="map" class="mazemap"></div>
+	<div id="controls" class="mapboxgl-ctrl-group">
+	<button class="btn" id="train-model-btn">Train Model</button>
+	<button onClick="window.open('http://127.0.0.1:5000');">Back to Home</button>
+	</div>
+	<script>
+
+        var myMap = new Mazemap.Map({
+                    // container id specified in the HTML
+                    container: 'map',
+                    campuses: 495,
+                    center: {lng: 151.182014, lat: -33.794685},
+                    zoom: 20.2,
+                    zLevel: 1,
+                    scrollZoom: true,
+                    doubleClickZoom: false,
+                    touchZoomRotate: false
+        });
+
+        // add the logo of UNSW and WBS
+        var logo_location = document.getElementsByClassName("mazemap-ctrl-logo")[0];
+        var logo_location_p = logo_location.parentNode;
+        logo_location.parentNode.removeChild(logo_location);
+
+        var unsw_logo = document.createElement("img")
+        unsw_logo.src = "https://iotresearch.s3-ap-southeast-2.amazonaws.com/partners_logo.png";
+        unsw_logo.className = "img_logo";
+
+        logo_location_p.appendChild(unsw_logo)
+
+        function input_training_set() {
+
+            const train_header = document.getElementById("map");
+            const train_bt = document.getElementById("train-model-btn");
+
+            //CSV file URL(better from AWS Bucket 3)
+            var input_csv_path = document.createElement("input")
+            input_csv_path.type = "text";
+            input_csv_path.placeholder = "input the CSV URL path";
+            input_csv_path.name = "input_csv_path";
+            input_csv_path.className = "log_input";
+            input_csv_path.id = "input_csv_path_id";
+
+            // predict CSV file URL
+            var input_predict_path = document.createElement("input");
+            input_predict_path.type = "text";
+            input_predict_path.placeholder = "input the predict CSV URL path";
+            input_predict_path.name= "predict_csv_path";
+            input_predict_path.className = "log_input";
+            input_predict_path.id = "input_predict_path_id";
+
+            // level input 
+            var input_train_level = document.createElement("input");
+            input_train_level.type = "text";
+            input_train_level.placeholder = "input train level: ug/lg/b1/b2";
+            input_train_level.name = "input_train_level";
+            input_train_level.className = "log_input";
+            input_train_level.id = "input_train_level_id";
+
+            //image
+            var img_train_banner = document.createElement("img");
+            img_train_banner.src = "https://iotresearch.s3-ap-southeast-2.amazonaws.com/img_banner2.jpg";
+            img_train_banner.className = "img"
+
+            //create modal to display the form
+            var train_modal = document.createElement("div");
+            train_modal.className = "modal";
+
+            // subnet modal
+            var s_train_modal = document.createElement("div");
+            s_train_modal.className = "modal-content";
+
+            // create submission button
+            var train_submit_bt = document.createElement("button");
+            train_submit_bt.textContent = "Submit";
+            train_submit_bt.className = "submit_bt";
+            train_submit_bt.id = "train_submit_bt_id";
+
+            // append child
+            s_train_modal.appendChild(img_train_banner);
+            s_train_modal.appendChild(input_csv_path);
+            s_train_modal.appendChild(input_predict_path);
+            s_train_modal.appendChild(input_train_level);
+            s_train_modal.appendChild(train_submit_bt);
+
+            //create a form to get formdata
+            var train_input_form = document.createElement("form");
+            train_input_form.name = "input_form";
+            train_input_form.id = "train_input_form_id";
+
+            train_input_form.appendChild(s_train_modal);
+            train_modal.appendChild(train_input_form);
+            train_header.appendChild(train_modal);
+
+
+            train_bt.addEventListener("click",function(){
+
+                train_modal.style.display = "block";
+            })
+
+            // close popup window
+            document.onclick = function(event) {
+            if (event.target == train_modal){
+                train_modal.style.display = "none";
+            }
+            }
+
+            // after submitting, the modal disappear
+            train_submit_bt.onclick = function(){
+                train_modal.style.display = "none";
+            }
+
+
+        }
+
+        input_training_set();
+
+
+        // monitor the url and level submission
+        var train_submit_btn = document.getElementById("train_submit_bt_id");
+
+        train_submit_btn.addEventListener("click",function(e){
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        var csv_url_path = document.getElementById("input_csv_path_id").value;
+        var predict_url_path = document.getElementById("input_predict_path_id").value;
+        var csv_level = document.getElementById("input_train_level_id").value;
+
+        console.log(csv_url_path)
+        console.log(predict_url_path)
+        console.log(csv_level)
+
+        //convert to json
+
+        var train_json = {
+
+            csv_path:csv_url_path,
+            pre_path:predict_url_path,
+            level:csv_level
+        };
+
+        //level_v = parseInt(level_value)
+
+        if (csv_level == "ug") {
+            level_v = 2
+
+        } else if (csv_level == "lg") {
+            level_v = 1
+
+        } else if (csv_level == "b1") {
+            level_v = 0
+
+        } else {
+            level_v = -1
+        } 
+
+
+        // transmist data to backend
+        fetch(`${window.origin}/training`, {
+
+            method: "POST",
+            credentials: "include",
+            body: JSON.stringify(train_json),
+            cache: "no-cache",
+            headers: new Headers({
+                "content-type": "application/json"
+            }) 
+
+        })
+        .then(function(response){
+
+            // get the response from backend
+            if (response.status != 200){
+                console.log("Training Data Wrong")
+                return;
+            }
+
+            response.json().then(function(data){
+
+                var lng_v = data.lan
+                var lat_v = data.lat
+                var lab_v = data.label
+
+                var lng_v_list = lng_v.split(',')
+                var lat_v_list = lat_v.split(',')
+                var lab_v_list = lab_v.split(',')
+
+                list_len = lng_v_list.length
+
+                console.log(lng_v_list)
+                console.log(lat_v_list)
+                console.log(lab_v_list)
+                console.log(list_len)
+
+
+
+                ln_start = parseFloat(lng_v_list[0])
+                la_start = parseFloat(lat_v_list[0])
+
+
+                ln_dest = parseFloat(lng_v_list[list_len-1])
+                la_dest = parseFloat(lat_v_list[list_len-1])
+
+
+                var myMap = new Mazemap.Map({
+                    // container id specified in the HTML
+                    container: 'map',
+                    campuses: 495,
+                    center: {lng: 151.182014, lat: -33.794685},
+                    zoom: 20.2,
+                    zLevel: 1,
+                    scrollZoom: true,
+                    doubleClickZoom: false,
+                    touchZoomRotate: false
+                });
+
+                // Some hardcoded route example start and destinations
+                var start1 = { lngLat: {lng: ln_start, lat: la_start}, zLevel: level_v};
+                var start2 = { poiId: 194915 };
+                var dest1 = { lngLat: {lng: ln_dest, lat: la_dest}, zLevel: level_v};
+                var dest2 = { poiId: 195096 };
+                var dest3 = { poiId: 195118};
+
+                var s_lngLat = {lng: ln_start, lat: la_start}
+                var d_lngLat = {lng: ln_dest, lat: la_dest}
+
+
+                // Marker the start and destionation
+
+                myMap.on('load', function(){
+                    // MazeMap ready
+
+                    var lngLat = myMap.getCenter();
+
+                    var marker = new Mazemap.MazeMarker( {
+                        color: "MazeBlue",
+                        size: 36,
+                        zLevel: level_v
+                    } ).setLngLat( s_lngLat ).addTo(myMap);
+
+                    var marker2 = new Mazemap.MazeMarker( {
+                        color: "MazeMapOrange",
+                        size: 36,
+                        zLevel: level_v
+                    } ).setLngLat( d_lngLat ).addTo(myMap);
+
+                });
+
+
+                var routeController;
+
+                myMap.on('load', function(){
+
+                    routeController = new Mazemap.RouteController(myMap, {
+                        routeLineColorPrimary: '#0099EA',
+                        routeLineColorSecondary: '#888888'
+                    });
+                    setRoute(start1, dest1);
+                });
+
+                function setRoute( start, dest ){
+                    routeController.clear(); // Clear existing route, if any
+
+                    Mazemap.Data.getRouteJSON(start, dest)
+                    .then(function(geojson){
+                        console.log('@ geojson', geojson);
+                        routeController.setPath(geojson);
+                        var bounds = Mazemap.Util.Turf.bbox(geojson);
+                        myMap.fitBounds( bounds, {padding: 100} );
+                    });
+                }
+
+                // add the logo of UNSW and WBS
+                var logo_location = document.getElementsByClassName("mazemap-ctrl-logo")[0];
+                var logo_location_p = logo_location.parentNode;
+                logo_location.parentNode.removeChild(logo_location);
+
+                var unsw_logo = document.createElement("img")
+                unsw_logo.src = "https://iotresearch.s3-ap-southeast-2.amazonaws.com/partners_logo.png";
+                unsw_logo.className = "img_logo";
+
+                logo_location_p.appendChild(unsw_logo)
+
+            })
+
+
+        })
+
+        })
+
+		
+
+	</script>
+</body>
