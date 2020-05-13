@@ -22,4 +22,5 @@ UNSW_IoT_Research_Project
 5. run command "python3 backend.py"
 
 6. Please remember to chage the url "http://www.uncloud.club/" to your local ip address path in index.html line 188 and 193, if you want to test locally.
-   
+
+7. more issue, please contact me through xiaowei900625@gmail.com
